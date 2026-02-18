@@ -70,7 +70,7 @@ export default function AuthPage() {
             {isLogin ? "ENTRAR" : "CADASTRAR"}
           </h1>
           <p className="mt-2 text-xs text-muted-foreground">
-            {isLogin ? "Acessa tua conta. Exclusivo +18." : "Cria tua conta. Apenas maiores de 18."}
+            {isLogin ? "acessa tua conta." : "cria tua conta."}
           </p>
         </div>
 

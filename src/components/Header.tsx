@@ -5,7 +5,7 @@ import logo from "@/assets/logo.png";
 
 const navLinks = [
   { label: "início", to: "/" },
-  { label: "estoque +18", to: "/produtos" },
+  { label: "estoque", to: "/produtos" },
   { label: "quem somos", to: "/sobre-nos" },
 ];
 
@@ -38,8 +38,8 @@ export default function Header() {
               key={link.to}
               to={link.to}
               className={`text-xs font-mono tracking-widest uppercase transition-colors ${location.pathname === link.to
-                  ? "text-[#7BFA6B]"
-                  : "text-[#555] hover:text-[#999]"
+                ? "text-[#7BFA6B]"
+                : "text-[#555] hover:text-[#999]"
                 }`}
             >
               {link.label}
@@ -84,8 +84,8 @@ export default function Header() {
               to={link.to}
               onClick={() => setMobileOpen(false)}
               className={`block py-3 text-xs font-mono uppercase tracking-widest ${location.pathname === link.to
-                  ? "text-[#7BFA6B]"
-                  : "text-[#555]"
+                ? "text-[#7BFA6B]"
+                : "text-[#555]"
                 }`}
             >
               {link.label}

@@ -41,7 +41,7 @@ export default function AboutPage() {
             Sem censura. Sem rastros. 100% Discreto.
           </h1>
           <p className="mt-4 max-w-xl mx-auto text-muted-foreground">
-            Acesso liberado ao estoque restrito. Pagamento anônimo e entrega sigilosa. Apenas para maiores de 18 anos.
+            Acesso ao estoque restrito. Pagamento anônimo e entrega sigilosa.
           </p>
         </motion.div>
       </section>
@@ -99,7 +99,7 @@ export default function AboutPage() {
 
       {/* FOOTER */}
       <footer className="border-t border-primary/20 py-6 text-center text-xs text-muted-foreground">
-        Exclusivo para maiores de 18 anos. Embalagem neutra. Sem rastros.
+        Embalagem neutra. Sem rastros.
       </footer>
     </div>
   );
