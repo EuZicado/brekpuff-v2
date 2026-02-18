@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Eye, EyeClosed, Lightning } from "@phosphor-icons/react";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/brek.svg";
 
 export default function AuthPage() {
   const { user, loading: authLoading } = useAuth();
