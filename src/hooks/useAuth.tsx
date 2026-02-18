@@ -29,8 +29,8 @@ const AuthContext = createContext<AuthCtx>({
   roles: [],
   isAdmin: false,
   loading: true,
-  signOut: async () => {},
-  refreshProfile: async () => {},
+  signOut: async () => { },
+  refreshProfile: async () => { },
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -59,17 +59,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session?.user) {
-        setTimeout(() => fetchProfile(session.user.id), 0);
+        // Don't use setTimeout — fetch synchronously so roles are ready
+        fetchProfile(session.user.id);
       } else {
         setProfile(null);
         setRoles([]);
+        setLoading(false);
       }
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       if (session?.user) {
-        fetchProfile(session.user.id);
+        // Wait for profile+roles before marking loading=false
+        await fetchProfile(session.user.id);
       }
       setLoading(false);
     });
