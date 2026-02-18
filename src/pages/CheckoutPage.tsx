@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Lightning, CurrencyBtc, Link as LinkIcon, Copy,
-  ArrowSquareOut, CheckCircle, Toggle, ToggleLeft,
+  ArrowSquareOut, CheckCircle, ToggleRight, ToggleLeft,
   Storefront, QrCode,
 } from "@phosphor-icons/react";
 
@@ -584,14 +584,14 @@ export default function CheckoutPage() {
               type="button"
               onClick={() => setVendaFisica(v => !v)}
               className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all border ${vendaFisica
-                  ? "bg-primary text-black border-primary shadow-[0_0_16px_rgba(58,255,92,0.3)]"
-                  : "bg-card text-muted-foreground border-border hover:border-primary/50 hover:text-primary"
+                ? "bg-primary text-black border-primary shadow-[0_0_16px_rgba(58,255,92,0.3)]"
+                : "bg-card text-muted-foreground border-border hover:border-primary/50 hover:text-primary"
                 }`}
             >
               <Storefront size={16} />
               Venda Física
               {vendaFisica
-                ? <Toggle size={16} weight="fill" />
+                ? <ToggleRight size={16} weight="fill" />
                 : <ToggleLeft size={16} />
               }
             </button>
@@ -692,8 +692,8 @@ export default function CheckoutPage() {
                         type="button"
                         onClick={() => setPaymentMethod(m.id)}
                         className={`flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all ${paymentMethod === m.id
-                            ? "border-primary bg-primary/5 shadow-[0_0_12px_rgba(58,255,92,0.1)]"
-                            : "border-border hover:border-muted-foreground/30"
+                          ? "border-primary bg-primary/5 shadow-[0_0_12px_rgba(58,255,92,0.1)]"
+                          : "border-border hover:border-muted-foreground/30"
                           }`}
                       >
                         <m.icon size={24} className={paymentMethod === m.id ? "text-primary" : "text-muted-foreground"} />
