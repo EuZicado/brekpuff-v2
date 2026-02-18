@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { ShoppingCart, User, List, X } from "@phosphor-icons/react";
 import { useState } from "react";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/brek.svg";
 
 const navLinks = [
   { label: "início", to: "/" },
