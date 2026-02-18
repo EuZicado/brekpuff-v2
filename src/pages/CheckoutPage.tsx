@@ -93,7 +93,6 @@ function VendaFisicaPanel({ totalCents }: VendaFisicaProps) {
         if (d.status === "approved") {
           setPaid(true);
           es.close();
-          // Gate sound
           try {
             const ctx = new AudioContext();
             const osc = ctx.createOscillator();
@@ -115,11 +114,8 @@ function VendaFisicaPanel({ totalCents }: VendaFisicaProps) {
   const handleExpire = useCallback(async () => {
     toast.error("QR expirado.");
     if (pixData) {
-      try {
-        await supabase.functions.invoke("cancel-pix", {
-          body: { preference_id: pixData.preferenceId },
-        });
-      } catch { /* best-effort */ }
+      try { await supabase.functions.invoke("cancel-pix", { body: { preference_id: pixData.preferenceId } }); }
+      catch { /* best-effort */ }
     }
     setPixData(null);
   }, [pixData]);
@@ -130,32 +126,19 @@ function VendaFisicaPanel({ totalCents }: VendaFisicaProps) {
     setGenerating(true);
     setPaid(false);
     try {
-      // Create a temporary order for the physical sale
       const { data: order, error: orderErr } = await supabase
         .from("orders")
-        .insert({
-          status: "pending",
-          total_cents: totalCents,
-          payment_method: "pix",
-          shipping_address: { type: "presencial" },
-        })
+        .insert({ status: "pending", total_cents: totalCents, payment_method: "pix", shipping_address: { type: "presencial" } })
         .select("id")
         .single();
-
       if (orderErr) throw orderErr;
 
-      const { data, error } = await supabase.functions.invoke("create-pix", {
-        body: { order_id: order.id },
-      });
-
+      const { data, error } = await supabase.functions.invoke("create-pix", { body: { order_id: order.id } });
       if (error || !data) throw new Error("Falha ao gerar Pix");
 
-      const qrBase64 =
-        data.point_of_interaction?.transaction_data?.qr_code_base64 ??
-        data.qr_code_base64 ?? "";
+      const qrBase64 = data.point_of_interaction?.transaction_data?.qr_code_base64 ?? data.qr_code_base64 ?? "";
       const initPoint = data.init_point ?? data.sandbox_init_point ?? "";
       const preferenceId = data.id ?? order.id;
-
       setPixData({ preferenceId, qrBase64, initPoint });
     } catch (err: any) {
       toast.error(err.message ?? "Erro ao gerar QR Pix");
@@ -166,140 +149,174 @@ function VendaFisicaPanel({ totalCents }: VendaFisicaProps) {
 
   const handleReset = () => { setPixData(null); setPaid(false); };
 
-  // ── Paid ──
+  // ── Timer color: bright green → dim yellow → dim red ──
+  const timerHex = timeLeft > 240 ? "#7BFA6B" : timeLeft > 60 ? "#c8a800" : "#cc3333";
+  const timerOpacity = timeLeft > 240 ? 1 : timeLeft > 60 ? 0.75 : 0.65;
+
+  // ── PAID fullscreen ──
   if (paid) {
     return (
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col items-center gap-6 rounded-2xl border border-primary/30 bg-primary/5 p-8 text-center"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="fixed inset-0 z-[100] flex flex-col items-center justify-center"
+        style={{ background: "#050f05" }}
       >
+        {/* Floating vertices */}
+        <div className="float-tl absolute top-6 left-6 w-8 h-8 border-t-2 border-l-2 border-[#7BFA6B] opacity-60" />
+        <div className="float-br absolute bottom-6 right-6 w-8 h-8 border-b-2 border-r-2 border-[#7BFA6B] opacity-60" />
+        <div className="float-br absolute top-6 right-6 w-5 h-5 border-t-2 border-r-2 border-[#7BFA6B] opacity-30" />
+        <div className="float-tl absolute bottom-6 left-6 w-5 h-5 border-b-2 border-l-2 border-[#7BFA6B] opacity-30" />
+
         <motion.div
-          animate={{ scale: [0.7, 1.15, 1] }}
-          transition={{ duration: 0.4, ease: "backOut" }}
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.35, ease: "backOut" }}
+          className="flex flex-col items-center gap-6 text-center px-8"
         >
-          <CheckCircle size={72} weight="fill" className="text-primary" />
-        </motion.div>
-        <div>
-          <h2 className="text-3xl font-bold text-primary">PAGO ✅</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Pagamento confirmado via Pix</p>
-          <p className="mt-2 text-xl font-bold">{formatBRL(totalCents)}</p>
-        </div>
-        {/* Gate slide */}
-        <div className="w-full overflow-hidden rounded-lg border border-border bg-muted h-8 relative">
-          <motion.div
-            initial={{ x: "-100%" }}
-            animate={{ x: "0%" }}
-            transition={{ duration: 0.6, delay: 0.2, ease: "easeInOut" }}
-            className="absolute inset-0 bg-primary/20 flex items-center justify-center"
-          >
-            <span className="text-xs font-semibold text-primary uppercase tracking-widest">
-              Portão liberado
-            </span>
+          <motion.div animate={{ scale: [0.85, 1.1, 1] }} transition={{ duration: 0.4, ease: "backOut" }}>
+            <CheckCircle size={80} weight="fill" style={{ color: "#7BFA6B" }} />
           </motion.div>
-        </div>
-        <Button variant="outline" onClick={handleReset} className="w-full">
-          Nova venda
-        </Button>
+          <div>
+            <p className="text-4xl font-bold font-mono" style={{ color: "#7BFA6B" }}>pago ✓</p>
+            <p className="mt-2 text-sm font-mono text-[#444]">{formatBRL(totalCents)}</p>
+          </div>
+          {/* Gate slide */}
+          <div className="w-64 overflow-hidden border border-[#1a2a1a] bg-[#0a0f0a] h-7 relative">
+            <motion.div
+              initial={{ x: "-100%" }} animate={{ x: "0%" }}
+              transition={{ duration: 0.7, delay: 0.3, ease: "easeInOut" }}
+              className="absolute inset-0 flex items-center justify-center"
+              style={{ background: "rgba(123,250,107,0.12)" }}
+            >
+              <span className="text-[10px] font-mono text-[#7BFA6B] uppercase tracking-[0.35em]">portão liberado</span>
+            </motion.div>
+          </div>
+          <button
+            onClick={handleReset}
+            className="mt-2 text-[10px] font-mono text-[#333] hover:text-[#555] uppercase tracking-widest transition-colors"
+          >
+            nova venda
+          </button>
+        </motion.div>
       </motion.div>
     );
   }
 
-  // ── QR Waiting ──
+  // ── QR FULLSCREEN MODAL ──
   if (pixData) {
     return (
       <motion.div
-        initial={{ opacity: 0, scale: 0.97 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="space-y-6"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden"
+        style={{ background: "#0a0f0a" }}
       >
-        {/* QR */}
-        <div className="flex flex-col items-center gap-3">
-          <QRCanvas base64={pixData.qrBase64} />
-          <p className="text-xs text-muted-foreground text-center">
-            Mostre ao cliente para escanear com o app do banco
-          </p>
-        </div>
+        {/* Hex matrix bg */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.07]"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='60'%3E%3Ctext x='0' y='14' font-family='monospace' font-size='9' fill='%237BFA6B'%3E0x1A 0xFF 0x3B%3C/text%3E%3Ctext x='0' y='28' font-family='monospace' font-size='9' fill='%237BFA6B'%3E0x7F 0x00 0xC4%3C/text%3E%3Ctext x='0' y='42' font-family='monospace' font-size='9' fill='%237BFA6B'%3E0xDE 0xAD 0xBE%3C/text%3E%3Ctext x='0' y='56' font-family='monospace' font-size='9' fill='%237BFA6B'%3E0xEF 0x12 0x9A%3C/text%3E%3C/svg%3E")`,
+            backgroundRepeat: "repeat",
+          }}
+        />
 
-        {/* Value */}
-        <div className="rounded-xl border border-border bg-card p-4 flex justify-between items-center">
-          <span className="text-sm text-muted-foreground">Valor a pagar</span>
-          <span className="text-xl font-bold text-primary">{formatBRL(totalCents)}</span>
-        </div>
+        {/* Floating vertices — 4 corners */}
+        <div className="float-tl absolute top-5 left-5 w-10 h-10 border-t-2 border-l-2 border-[#7BFA6B] opacity-70" />
+        <div className="float-br absolute bottom-5 right-5 w-10 h-10 border-b-2 border-r-2 border-[#7BFA6B] opacity-70" />
+        <div className="float-br absolute top-5 right-5 w-6 h-6 border-t-2 border-r-2 border-[#7BFA6B] opacity-35" />
+        <div className="float-tl absolute bottom-5 left-5 w-6 h-6 border-b-2 border-l-2 border-[#7BFA6B] opacity-35" />
 
-        {/* Timer */}
-        <div className="rounded-xl border border-border bg-card p-4 flex flex-col items-center gap-1">
-          <p className="text-xs text-muted-foreground uppercase tracking-widest">Expira em</p>
-          <span className={`text-4xl font-bold tabular-nums font-mono transition-colors ${timerColor(timeLeft)}`}>
-            {fmt(timeLeft)}
-          </span>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-            <span className="text-xs text-muted-foreground">Aguardando confirmação...</span>
+        {/* Content */}
+        <div className="relative z-10 flex flex-col items-center gap-6 w-full max-w-sm px-6">
+
+          {/* Timer — above QR, floating, glow pulses with minutes */}
+          <div className="flex flex-col items-center gap-1">
+            <p className="text-[9px] font-mono text-[#2a3a2a] uppercase tracking-[0.4em]">expira em</p>
+            <span
+              className="text-5xl font-bold font-mono tabular-nums timer-glow"
+              style={{ color: timerHex, opacity: timerOpacity }}
+            >
+              {fmt(timeLeft)}
+            </span>
           </div>
-        </div>
 
-        {/* Link */}
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            className="flex-1 gap-2"
-            onClick={() => {
-              navigator.clipboard.writeText(pixData.initPoint);
-              toast.success("Link copiado!");
+          {/* QR — green pulsing, smoky black bg */}
+          <div
+            className="neon-pulse p-3 flex items-center justify-center"
+            style={{
+              background: "#060c06",
+              border: "1px solid rgba(123,250,107,0.25)",
             }}
           >
-            <Copy size={16} /> Copiar link
-          </Button>
-          <Button
-            variant="outline"
-            className="flex-1 gap-2"
-            onClick={() => {
-              window.open(pixData.initPoint, "_blank");
-              navigator.clipboard.writeText(pixData.initPoint).catch(() => { });
-              toast.success("Link copiado automaticamente!");
-            }}
-          >
-            <ArrowSquareOut size={16} /> Abrir link
-          </Button>
-        </div>
+            <QRCanvas base64={pixData.qrBase64} />
+          </div>
 
-        <Button variant="ghost" size="sm" onClick={handleReset} className="w-full text-muted-foreground">
-          Cancelar e gerar novo
-        </Button>
+          {/* Instruction text — monospace lowercase full-width */}
+          <div className="w-full text-center space-y-1">
+            <p className="text-[11px] font-mono text-[#7BFA6B] tracking-wide">
+              show this screen to buyer
+            </p>
+            <p className="text-[11px] font-mono text-[#3a4a3a] tracking-wide">
+              / show your phone to seller
+            </p>
+            <p className="mt-2 text-[10px] font-mono text-[#2a2a2a]">
+              {formatBRL(totalCents)}
+            </p>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 w-full">
+            <button
+              onClick={() => { navigator.clipboard.writeText(pixData.initPoint); toast.success("copiado"); }}
+              className="flex-1 py-2 text-[10px] font-mono text-[#3a4a3a] border border-[#1a2a1a] hover:border-[#7BFA6B] hover:text-[#7BFA6B] transition-colors uppercase tracking-widest"
+            >
+              copiar link
+            </button>
+            <button
+              onClick={() => { window.open(pixData.initPoint, "_blank"); navigator.clipboard.writeText(pixData.initPoint).catch(() => { }); toast.success("link copiado"); }}
+              className="flex-1 py-2 text-[10px] font-mono text-[#3a4a3a] border border-[#1a2a1a] hover:border-[#7BFA6B] hover:text-[#7BFA6B] transition-colors uppercase tracking-widest"
+            >
+              abrir link
+            </button>
+          </div>
+
+          <button
+            onClick={handleReset}
+            className="text-[9px] font-mono text-[#222] hover:text-[#444] uppercase tracking-widest transition-colors"
+          >
+            cancelar
+          </button>
+        </div>
       </motion.div>
     );
   }
 
-  // ── Generate ──
+  // ── Generate button ──
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+      <div className="border border-[#1a2a1a] bg-[#0a0f0a] p-5 space-y-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-            <QrCode size={20} className="text-primary" />
-          </div>
+          <QrCode size={20} style={{ color: "#7BFA6B" }} />
           <div>
-            <p className="text-sm font-semibold">Gerar QR Pix presencial</p>
-            <p className="text-xs text-muted-foreground">
-              Valor: <span className="font-bold text-primary">{formatBRL(totalCents)}</span>
+            <p className="text-xs font-mono text-[#aaa]">gerar qr pix presencial</p>
+            <p className="text-[10px] font-mono text-[#444]">
+              valor: <span style={{ color: "#7BFA6B" }}>{formatBRL(totalCents)}</span>
             </p>
           </div>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Gera um QR Pix único com o valor exato do pedido. Mostre ao cliente na tela — ele escaneia com o app do banco e o sistema confirma automaticamente.
+        <p className="text-[10px] font-mono text-[#333] leading-relaxed">
+          gera um qr pix único com o valor exato. mostre ao cliente na tela — ele escaneia com o app do banco.
         </p>
       </div>
 
-      <Button
+      <button
         onClick={handleGenerate}
         disabled={generating}
-        className="w-full gap-2"
-        size="lg"
+        className="btn-cta w-full py-3 text-xs"
       >
-        <QrCode size={18} />
-        {generating ? "Gerando QR Pix..." : "Gerar QR Pix agora"}
-      </Button>
+        {generating ? "gerando..." : "gerar qr pix agora"}
+      </button>
     </div>
   );
 }
